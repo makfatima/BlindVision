@@ -1,0 +1,115 @@
+# BlindVision — Fusion Engine Configuration
+#
+# Values are pinned to the figures reported in Section IV ("Sensor Fusion
+# and Algorithms") of the manuscript. They are left here as named,
+# adjustable parameters — per the paper, "a reference implementation
+# accompanying this manuscript's code release leaves the four weight
+# constants as named, adjustable parameters so that they can be retuned
+# without modifying the fusion code itself" — rather than hard-coded in
+# goggles/fusion/fusion_engine.py.
+#
+# Ordering constraint the calibration protocol was designed to preserve
+# (Section IV): w_vc > w_sp > w_vp > w_sc
+
+fusion:
+  # Score-level fusion weights. R = w_vc*C + w_vp*P + w_sp*U + w_sc*W
+  weights:
+    w_vc: 0.40   # vision class confidence (C)
+    w_vp: 0.20   # vision proximity        (P)
+    w_sp: 0.25   # stick ultrasonic proximity (U)
+    w_sc: 0.15   # stick critical/water-flag term (W)
+
+  # Normalization ranges used by prox(d, D_max) = clip(1 - d/D_max, 0, 1)
+  normalization:
+    D_vmax_m: 8.0   # upper end of tested vision detection range (Section VI.B)
+    D_smax_m: 3.0   # upper end of tested ultrasonic range (Section VI.D)
+
+  # High-risk fused threshold (Algorithm 1, line 7)
+  high_risk_fused_threshold: 0.8
+
+# Priority-tier distance bands (Table I / Algorithm 1)
+distance_bands_m:
+  critical: 0.5          # 0 - 0.5 m -> Critical
+  medium: 1.2            # 0.5 - 1.2 m -> Medium
+  low: 2.0                # 1.2 - 2.0 m -> Low
+  # > 2.0 m -> Routine
+
+# Vision classes that escalate to CRITICAL_OBSTACLE within 2.0 m
+# (Algorithm 1, line 3 — closing-speed rationale in Section IV)
+high_risk_visual_classes:
+  - person
+  - vehicle
+  - bicycle
+
+# Drop-off detection: downward IR reports no ground return closer than
+# this distance, i.e. measured down-distance exceeds the nominal ground
+# plane (Section IV).
+dropoff_threshold_m: 0.5
+
+# Battery / connectivity
+low_battery_pct: 20
+stick_link_timeout_s: 5          # no packet for > 5s -> Vision-Only Mode
+fall_watchdog_no_recovery_s: 8   # forces SOS if fall detected + no recovery
+
+# Vision pipeline (Section III)
+vision:
+  model: "yolov8n"           # on-device model, CPU-only inference (Table XIX)
+  # Path is relative to the repository root. Ships pointing at the
+  # bundled COCO-pretrained checkpoint (see training/models/README.md
+  # for its sha256 and provenance) so the goggles software produces
+  # real detections with zero training required. Point this at your
+  # own fine-tuned training/runs/.../weights/best.pt once you have one,
+  # and set class_mapping to "identity".
+  weights_path: "training/models/yolov8n_coco_pretrained.pt"
+  class_mapping: "coco"      # "coco" (apply goggles/vision/coco_mapping.py) | "identity" (use model's own class names)
+  cameras:
+    - id: front_left
+      bearing_deg: 45
+      fov_deg: 120
+    - id: front_right
+      bearing_deg: 135
+      fov_deg: 120
+    - id: rear_left
+      bearing_deg: 225
+      fov_deg: 120
+    - id: rear_right
+      bearing_deg: 315
+      fov_deg: 120
+  confidence_threshold: 0.45
+
+# Stick sensor layout (Section III)
+stick:
+  ultrasonic_sensors:
+    - id: front
+      bearing_deg: 0
+    - id: left
+      bearing_deg: 90
+    - id: right
+      bearing_deg: 270
+    - id: rear
+      bearing_deg: 180
+    - id: down
+      bearing_deg: -90     # angled downward, near-field ground sensing
+  ir_sensors:
+    - id: ir_down_1
+    - id: ir_down_2
+  poll_rate_hz: 15          # Core 0 polls sensors at ~10-20 Hz (Section III)
+
+# BLE link
+ble:
+  device_name: "BlindVision-Stick"
+  service_uuid: "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+  packet_char_uuid: "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
+  expected_period_ms: 50    # ~20 Hz packet stream
+
+# Audio / TTS
+audio:
+  engine: "pyttsx3"          # offline-preferred TTS (Section III)
+  rate_wpm: 175
+  sos_pattern_pulses: 3      # never overlaps with normal hazard signals
+
+# Caregiver / backend
+caregiver:
+  backend_url: "https://backend.example.org/api/v1"
+  transport: "TLS1.2"
+  geofence_check_interval_s: 10
