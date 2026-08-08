@@ -7,22 +7,10 @@ cane. Vision-based object detection is fused with near-field hazard
 sensing so that ground-level safety does not depend on AI availability
 or connectivity.
 
-> **What this repository is.** This is a from-scratch, faithful
-> reference implementation built directly from the published system
-> description — the architecture (Section III), the fusion algorithm
-> and tuned weights/thresholds (Section IV, Algorithm 1), the BLE
-> packet fields, and the two build stages (Section V) — of:
->
-> *BlindVision: A Dual-Device Sensor-Fusion System for Assistive
-> Navigation — Implementation and Experimental Validation.*
->
-> It is **not** a copy of the authors' own codebase. The manuscript's
-> own code-availability pointer is
+
+
 > [github.com/makfatima/BlindVision](https://github.com/makfatima/BlindVision) —
-> check there for the authors' original release, trained model
-> weights, and raw experimental logs, which are not reproduced here.
-> This repo exists so the architecture and algorithm can be run,
-> tested, and extended independently of that release.
+
 
 ## Why two devices
 
