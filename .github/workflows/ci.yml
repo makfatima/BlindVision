@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip / ultralytics assets
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.config/Ultralytics
+          key: ${{ runner.os }}-blindvision-${{ hashFiles('goggles/requirements.txt', 'backend/requirements.txt') }}
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pyyaml fastapi uvicorn pydantic httpx
+          # ultralytics/torch/opencv power the vision integration test
+          # and the calibration tools; CPU-only wheels are fine for CI.
+          pip install ultralytics opencv-python-headless
+
+      - name: Verify bundled checkpoint provenance
+        run: |
+          echo "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36  training/models/yolov8n_coco_pretrained.pt" | sha256sum -c -
+
+      - name: Run full test suite (fusion engine, BLE packet, backend, calibration, vision integration)
+        run: |
+          pytest -v
+
+      - name: Compile-check all Python modules
+        run: |
+          python -m py_compile $(find goggles backend poc tools -name '*.py' ! -path '*/tests/*')

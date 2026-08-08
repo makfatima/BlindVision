@@ -1,0 +1,36 @@
+{
+  "k": 0.8499999999999999,
+  "reference_object": "pinhole-model estimate, 1.7m adult, ~90deg vertical FOV (PLACEHOLDER - recalibrate with tools/calibrate_vision_distance.py)",
+  "fit_r_squared": 1.0,
+  "n_samples": 7,
+  "samples": [
+    [
+      0.85,
+      1.0
+    ],
+    [
+      0.425,
+      2.0
+    ],
+    [
+      0.2833333333333333,
+      3.0
+    ],
+    [
+      0.2125,
+      4.0
+    ],
+    [
+      0.16999999999999998,
+      5.0
+    ],
+    [
+      0.14166666666666666,
+      6.0
+    ],
+    [
+      0.10625,
+      8.0
+    ]
+  ]
+}
