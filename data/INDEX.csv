@@ -1,0 +1,14 @@
+Artifact category,file,Status
+Dataset composition,Dataset_Manifest_.csv,Reported dataset composition
+Class definitions,Class_Definition.csv,Reported ten-class configuration
+Training/evaluation summary,Training_Epoch_Log_.csv,Recorded summary checkpoints
+Held-out detection results,Heldout_Test.csv,Reported 700-image held-out results
+Classwise detection results,Classwise_Evaluation.csv,Reported classwise results
+Per-tester navigation summary,raw/participant_trials_breakdown.csv,Seven-tester breakdown of the 100-trial aggregate: 100 trials / 96 successful (not a disability-status breakdown; see raw/README.md)
+Per-tester trial outcomes,raw/participant_trial_outcomes_100.csv,Trial-level outcome record for the same seven-tester pool
+Full-system aggregate,Trial_Session__Summary.csv,20 sessions / 100 navigation trials
+BLE results,BLE_Trace__Summary.csv,Reported 8000-packet aggregate
+Power measurements,Power_Log.csv,Power-meter measurements
+Fusion/arbitration,Arbitration_Ladder_Supplied.csv,Reported arbitration configuration
+Caregiver runtime,Caregiver_API_Runtime_Summary.csv,Reported caregiver event path
+Confusion aggregate,Confusion_Event_Summary_.csv,Aggregate result summary only

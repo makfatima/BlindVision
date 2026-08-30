@@ -1,0 +1,50 @@
+name: ci
+
+# Two things this proves that nothing previously did:
+#   1. the Python actually imports and its tests pass on a clean machine;
+#   2. the ESP32 firmware COMPILES. It never has. The C++ in this repository
+#      has only ever been read, not built.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependencies
+        # Deliberately NOT the full runtime requirements: torch and
+        # ultralytics are not needed to test the fusion maths, and pulling
+        # them in would make a green tick depend on a 2 GB download.
+        run: python -m pip install pytest
+      - name: Run tests
+        run: python -m pytest tests/ -v
+        env:
+          PYTHONPATH: smart_goggles
+
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PlatformIO
+        run: python -m pip install platformio
+      - name: Build Smart Stick firmware
+        run: pio run -d smart_stick
+
+  proof_of_concept:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Byte-compile everything
+        run: python -m compileall -q smart_goggles backend proof_of_concept tools
