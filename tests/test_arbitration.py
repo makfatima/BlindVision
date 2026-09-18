@@ -88,3 +88,53 @@ def test_vision_only_mode_ignores_stick_terms():
                           water_detected=True, fall_detected=True, sos_pressed=False)
     alert = arbitrate(detections, stick, DEFAULT_WEIGHTS, mode="vision_only")
     assert alert.tier not in (Tier.CRITICAL_DROPOFF, Tier.WATER_HAZARD, Tier.FALL_ALERT)
+
+
+def test_vision_only_uncalibrated_detection_still_warns():
+    """Regression test: with CAMERA_FOCAL_LENGTH_PX unset, VisionDetection
+    arrives with distance_m=None, so tiers 3/8/9 cannot fire. Before the
+    VISION_WARNING_UNCALIBRATED fallback, this fell through to ROUTINE,
+    which main.py's dispatcher never speaks -- i.e. Vision-Only Mode
+    produced no alert at all for a camera-detected obstacle. It must not
+    silently return to that behaviour."""
+    detections = [VisionDetection("person", confidence=0.82, bearing="left",
+                                   distance_m=None)]
+    alert = arbitrate(detections, stick=None, weights=DEFAULT_WEIGHTS,
+                       mode="vision_only")
+    assert alert.tier == Tier.VISION_WARNING_UNCALIBRATED
+    assert alert.severity == "Caution"
+    assert "left" in alert.message
+    # No distance figure must be invented in the message.
+    assert "m " not in alert.message.split("--")[0]
+
+
+def test_vision_only_uncalibrated_low_confidence_stays_routine():
+    """Below VISION_ONLY_WARNING_CONFIDENCE_MIN, the fallback must not fire
+    -- a low-confidence detection with no distance should not out-shout a
+    genuinely uncertain read."""
+    from config import VISION_ONLY_WARNING_CONFIDENCE_MIN
+    detections = [VisionDetection("chair", confidence=VISION_ONLY_WARNING_CONFIDENCE_MIN - 0.05,
+                                   bearing="front", distance_m=None)]
+    alert = arbitrate(detections, stick=None, weights=DEFAULT_WEIGHTS,
+                       mode="vision_only")
+    assert alert.tier == Tier.ROUTINE
+
+
+def test_vision_only_no_detections_stays_routine():
+    """No detections at all in Vision-Only Mode is still ROUTINE -- the
+    fallback only concerns a real, uncalibrated detection, not an absence
+    of detections."""
+    alert = arbitrate([], stick=None, weights=DEFAULT_WEIGHTS, mode="vision_only")
+    assert alert.tier == Tier.ROUTINE
+
+
+def test_vision_only_calibrated_distance_takes_priority_over_fallback():
+    """Once a distance IS available (calibration done), the existing
+    distance-based tiers must still take priority -- the uncalibrated
+    fallback must never preempt a calibrated reading."""
+    detections = [VisionDetection("chair", confidence=0.9, bearing="front",
+                                   distance_m=1.5)]
+    alert = arbitrate(detections, stick=None, weights=DEFAULT_WEIGHTS,
+                       mode="vision_only")
+    assert alert.tier == Tier.LOW
+    assert alert.tier != Tier.VISION_WARNING_UNCALIBRATED
