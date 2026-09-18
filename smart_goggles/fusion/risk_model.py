@@ -199,3 +199,51 @@ def fused_risk_by_bearing(detections: List[VisionDetection],
             best_bearing = bearing
 
     return best_score, best_bearing
+
+
+def max_reachable_fused_score(weights: FusionWeights = None,
+                               vision_calibrated: bool = False,
+                               d_smax: float = D_SMAX_M) -> float:
+    """Supremum of the fused score R actually reachable at the point
+    arbitration.py's Tier 6 evaluates it -- i.e. R's own ceiling, not R's
+    theoretical [0, w_vc+w_vp+w_sp+w_sc] range. Two of the four terms are
+    already capped lower than their nominal maximum by Algorithm 1's own
+    tier ordering, independent of this repository's current calibration
+    state:
+
+      * W (the stick critical-proximity flag) is always 0 here: W=1 needs
+        d_stick < CRITICAL_OBSTACLE_M, but any such reading already returns
+        CRITICAL_OBSTACLE at Tier 3, before Tier 6 runs. So by construction,
+        d_stick >= CRITICAL_OBSTACLE_M whenever R is actually computed.
+      * U (stick proximity) is correspondingly capped at
+        prox(CRITICAL_OBSTACLE_M, d_smax) -- approached, never reached,
+        since equality would itself trigger Tier 3.
+
+    The other two terms depend on whether the camera is calibrated:
+
+      * C (vision class confidence) maxes at 1.0 regardless -- confidence is
+        bounded there by construction, calibration or not.
+      * P (vision proximity) is 0.0 whenever the camera is uncalibrated
+        (config.CAMERA_FOCAL_LENGTH_PX unset -- prox() always returns 0.0
+        for a None distance, per its own docstring above) and up to 1.0 once
+        calibrated.
+
+    With this repository's shipped weights/thresholds and vision_calibrated
+    left at its default False, the ceiling is ~0.608, below
+    config.HIGH_RISK_FUSED_THRESHOLD (0.8) -- HIGH_RISK_FUSED cannot fire.
+    With vision_calibrated=True, the ceiling rises to ~0.808 -- ABOVE 0.8,
+    so calibrating the camera alone would make the tier reachable again (by
+    a non-high-risk-class object very close to the lens, paired with a
+    stick reading just above the critical band). This is intentionally not
+    a fixed "always unreachable" fact; it is a fact about the *current*
+    uncalibrated configuration, and this function is what future work
+    (Section VIII: fusion weight/threshold sensitivity sweep) should re-run
+    once real calibration data exists, rather than re-deriving by hand.
+    """
+    weights = weights or DEFAULT_WEIGHTS
+    c_max = 1.0
+    p_max = 1.0 if vision_calibrated else 0.0
+    u_max = prox(CRITICAL_OBSTACLE_M, d_smax)  # supremum, not attained
+    w_max = 0.0  # never attained at the point R is evaluated -- see above
+    return (weights.w_vc * c_max + weights.w_vp * p_max
+            + weights.w_sp * u_max + weights.w_sc * w_max)
