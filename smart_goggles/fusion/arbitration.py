@@ -18,6 +18,17 @@ matching tier wins). Transcribed directly from Section IV:
 10: if stick.battery_pct < 20% then return LOW_BATTERY
 11: return ROUTINE
 
+IMPLEMENTATION ADDITION, NOT IN THE PAPER'S ALGORITHM 1:
+ 9.5: if mode == vision_only and no detection has a distance
+      (CAMERA_FOCAL_LENGTH_PX unset) and the best detection's confidence
+      >= VISION_ONLY_WARNING_CONFIDENCE_MIN, then return
+      VISION_WARNING_UNCALIBRATED, announcing class/bearing without a
+      distance. Added because tiers 3/8/9 all require a distance and, with
+      none available, previously fell through to ROUTINE -- which the
+      dispatcher never speaks -- leaving Vision-Only Mode with no alert path
+      at all for a camera-only obstacle. See config.py for the threshold's
+      provenance (engineering default, not manuscript-derived).
+
 Runs in O(n) per fusion cycle (n = currently detected vision objects) to
 build the candidate risk terms, then O(1) tier evaluation, per the paper's
 complexity analysis. No history buffer is retained (O(1) memory).
@@ -31,9 +42,10 @@ from config import (
     HIGH_RISK_VISUAL_CLASSES, CRITICAL_OBSTACLE_M, HIGH_RISK_VISION_CLASS_RANGE_M,
     DROPOFF_DOWN_DISTANCE_M, MEDIUM_BAND_M, LOW_BAND_M,
     HIGH_RISK_FUSED_THRESHOLD, LOW_BATTERY_PCT, D_VMAX_M, D_SMAX_M,
+    VISION_ONLY_WARNING_CONFIDENCE_MIN,
 )
 from .risk_model import (VisionDetection, StickReading, fused_risk,
-                          fused_risk_by_bearing)
+                          fused_risk_by_bearing, _nearest_detection)
 
 
 @dataclass
@@ -149,6 +161,29 @@ def arbitrate(detections: List[VisionDetection],
     if nearest is not None and nearest < LOW_BAND_M:
         return Alert(Tier.LOW, TIER_TO_SEVERITY[Tier.LOW], risk_score=r,
                      message="Obstacle nearby -- caution.")
+
+    # Tier 9.5: Vision-Only Mode, distance-uncalibrated fallback.
+    #
+    # Reached only when mode == "vision_only" and nearest_vision_d is None --
+    # i.e. every visible detection lacks a distance (config.
+    # CAMERA_FOCAL_LENGTH_PX unset), so tiers 3, 8, and 9 above could not
+    # fire even though a detection exists. Previously this fell straight
+    # through to ROUTINE, which main.py's dispatcher never speaks, so an
+    # uncalibrated goggles unit produced no camera-obstacle alert at all in
+    # Vision-Only Mode. This picks the single highest-confidence detection --
+    # the same fallback rule risk_model._nearest_detection already applies
+    # when computing the fused score with no distance available -- and
+    # announces class and bearing without inventing a distance figure.
+    if mode == "vision_only" and nearest_vision_d is None:
+        uncalibrated_pick = _nearest_detection(detections)
+        if (uncalibrated_pick is not None
+                and uncalibrated_pick.confidence >= VISION_ONLY_WARNING_CONFIDENCE_MIN):
+            return Alert(
+                Tier.VISION_WARNING_UNCALIBRATED,
+                TIER_TO_SEVERITY[Tier.VISION_WARNING_UNCALIBRATED],
+                message=(f"{uncalibrated_pick.obj_class.capitalize()} detected "
+                         f"{uncalibrated_pick.bearing} -- distance unknown, "
+                         f"proceed with caution."))
 
     # Tier 10: low battery (unavailable in vision-only mode -- stick offline)
     if mode != "vision_only" and stick and stick.battery_pct is not None \
