@@ -35,11 +35,15 @@ class BlindVisionSystem:
         self.recorder = recorder or NullRecorder()
         self.instrumented = not isinstance(self.recorder, NullRecorder)
         self.mode_manager = ModeManager(stick_link_timeout_s=config.STICK_LINK_TIMEOUT_S)
-        self.detector = YoloDetector(
-            config.YOLO_MODEL_PATH,
-            confidence_threshold=config.YOLO_CONFIDENCE_THRESHOLD,
-            iou_threshold=config.YOLO_IOU_THRESHOLD,
-        )
+        # No shared YoloDetector/YOLO instance is built here. Ultralytics'
+        # own thread-safety guidance is explicit: sharing one model instance
+        # across threads risks race conditions in its internal state;
+        # instantiate a model inside each thread that uses it instead. With
+        # four concurrent _camera_worker threads (one per bearing, see
+        # run()), each thread now loads and owns its own YoloDetector -- see
+        # _camera_worker below. This costs one extra model load per camera
+        # at startup (four total instead of one) in exchange for eliminating
+        # the shared-instance race.
         self.cameras = CameraManager(device_map, resolution=config.CAMERA_RESOLUTION)
         self.stick_link = StickLink(
             config.BLE_STICK_SERVICE_UUID,
@@ -126,6 +130,16 @@ class BlindVisionSystem:
     # -- Camera worker -----------------------------------------------------
     def _camera_worker(self, bearing: str):
         stream = self.cameras.streams[bearing]
+        # Instantiated here, inside the thread that uses it, per Ultralytics'
+        # thread-safe-inference guidance -- not shared with the other three
+        # bearings' threads. Same model weights/thresholds as before
+        # (config.YOLO_MODEL_PATH / YOLO_CONFIDENCE_THRESHOLD /
+        # YOLO_IOU_THRESHOLD); only the sharing pattern changes.
+        detector = YoloDetector(
+            config.YOLO_MODEL_PATH,
+            confidence_threshold=config.YOLO_CONFIDENCE_THRESHOLD,
+            iou_threshold=config.YOLO_IOU_THRESHOLD,
+        )
         while True:
             frame = stream.latest()
             if frame is None:
@@ -145,7 +159,7 @@ class BlindVisionSystem:
                 timing.stamps["capture"] = frame.capture_perf
                 timing.mark("detect_start")
             try:
-                detections = self.detector.detect(frame.image, bearing, timing=timing)
+                detections = detector.detect(frame.image, bearing, timing=timing)
             except Exception:
                 logger.exception("Detection failed on %s stream", bearing)
                 time.sleep(0.1)
