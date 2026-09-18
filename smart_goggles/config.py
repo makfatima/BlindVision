@@ -1,4 +1,20 @@
 
+"""
+Central configuration for the Smart Goggles (Raspberry Pi vision node).
+
+Values in this file fall into two groups, and the distinction matters:
+
+  GROUP A -- stated in the manuscript. Fusion weights, distance
+  normalization ceilings, priority-tier thresholds, detector thresholds,
+  camera count/FOV/resolution, the stick-disconnect timeout. These are
+  transcribed and should not be changed without changing the paper.
+
+  GROUP B -- NOT in the manuscript anywhere. GPIO assignments, BLE UUIDs and
+  packet cadence, TTS rate, camera calibration, alert-repeat timing, backend
+  endpoints. The paper does not specify them, so nothing here can be sourced
+  from it. They are engineering defaults for THIS implementation and must not
+  be cited as as-tested values. See PROVENANCE.md for the line-by-line trace.
+"""
 
 from dataclasses import dataclass, field
 
