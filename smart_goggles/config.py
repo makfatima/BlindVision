@@ -1,19 +1,4 @@
-"""
-Central configuration for the Smart Goggles (Raspberry Pi vision node).
 
-Values in this file fall into two groups, and the distinction matters:
-
-  GROUP A -- stated in the manuscript. Fusion weights, distance
-  normalization ceilings, priority-tier thresholds, detector thresholds,
-  camera count/FOV/resolution, the stick-disconnect timeout. These are
-  transcribed and should not be changed without changing the paper.
-
-  GROUP B -- NOT in the manuscript anywhere. GPIO assignments, BLE UUIDs and
-  packet cadence, TTS rate, camera calibration, alert-repeat timing, backend
-  endpoints. The paper does not specify them, so nothing here can be sourced
-  from it. They are engineering defaults for THIS implementation and must not
-  be cited as as-tested values. See PROVENANCE.md for the line-by-line trace.
-"""
 
 from dataclasses import dataclass, field
 
@@ -53,6 +38,21 @@ HIGH_RISK_FUSED_THRESHOLD = 0.8   # R >= this -> HIGH_RISK_FUSED (tier 7)
 LOW_BATTERY_PCT = 20              # stick battery % floor -> LOW_BATTERY tier
 
 HIGH_RISK_VISUAL_CLASSES = {"person", "vehicle", "bicycle"}
+
+# Vision-Only Mode, distance-uncalibrated fallback (GROUP B -- NOT in the
+# manuscript). With CAMERA_FOCAL_LENGTH_PX unset, every VisionDetection
+# carries distance_m = None, so tiers 3, 8, and 9 -- all of which require a
+# distance -- can never fire in Vision-Only Mode, and arbitration silently
+# reaches ROUTINE, which main.py's dispatcher never speaks. That produced no
+# alert at all for a camera-only obstacle, contradicting the documented
+# fallback behaviour (Section III: "the goggles fall back to Vision-Only
+# Mode, warning about visually detected obstacles"). This threshold gates a
+# distance-independent warning (Tier.VISION_WARNING_UNCALIBRATED,
+# arbitration.py) that announces class and bearing without a distance
+# figure, rather than inventing one. It is an engineering default requiring
+# the same kind of bench validation as the other GROUP B constants above --
+# not a value derived from or reported in the manuscript.
+VISION_ONLY_WARNING_CONFIDENCE_MIN = 0.60
 
 # ---------------------------------------------------------------------------
 # Timeouts / fallback behavior (Section III)
@@ -151,6 +151,7 @@ class Tier:
     HIGH_RISK_FUSED = "HIGH_RISK_FUSED"
     MEDIUM = "MEDIUM"
     LOW = "LOW"
+    VISION_WARNING_UNCALIBRATED = "VISION_WARNING_UNCALIBRATED"
     LOW_BATTERY = "LOW_BATTERY"
     ROUTINE = "ROUTINE"
 
@@ -169,8 +170,10 @@ TIER_TO_SEVERITY = {
     Tier.HIGH_RISK_FUSED: "High-Risk",
     Tier.MEDIUM: "Caution",
     Tier.LOW: "Caution",
+    Tier.VISION_WARNING_UNCALIBRATED: "Caution",
     Tier.LOW_BATTERY: "Safe",
     Tier.ROUTINE: "Safe",
 }
 
 DEFAULT_WEIGHTS = FusionWeights()
+
