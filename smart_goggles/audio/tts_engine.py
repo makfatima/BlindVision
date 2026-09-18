@@ -37,6 +37,12 @@ _HAPTIC_PATTERN = {
     Tier.HIGH_RISK_FUSED: "double_pulse",
     Tier.MEDIUM: "single_pulse",
     Tier.LOW: "slow_pulse",
+    # Vision-Only Mode implies the stick link has already timed out
+    # (STICK_LINK_TIMEOUT_S, config.py), so this haptic command has nowhere
+    # to be delivered; the entry exists for consistency with the other
+    # Caution-severity tiers and so a lookup here is explicit, not a
+    # silent .get() fallback.
+    Tier.VISION_WARNING_UNCALIBRATED: "slow_pulse",
     Tier.LOW_BATTERY: "long_slow_pulse",
     Tier.ROUTINE: None,
 }
