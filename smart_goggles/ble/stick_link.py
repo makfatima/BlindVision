@@ -244,6 +244,38 @@ class StickLink:
             return True
         return (time.time() - self.last_packet_time) > self.link_timeout_s
 
+    @property
+    def is_connected(self) -> bool:
+        """True once the BLE client exists and reports itself connected.
+        Callers outside this module (e.g. main.py's haptic dispatch) should
+        check this rather than reaching into the private _client attribute."""
+        return self._client is not None and self._client.is_connected
+
+    async def send_haptic(self, pattern: str) -> bool:
+        """Write a named haptic pattern to the stick's command
+        characteristic (smart_stick/smart_stick.ino's onHapticCommand,
+        which maps these exact strings -- see tts_engine.py's
+        _HAPTIC_PATTERN -- onto outputs_set_pattern()). Same write call as
+        measure_rtt's ping token, on the same characteristic, just without
+        waiting for an echo back.
+
+        Returns True if the write was issued, False if there is currently no
+        connected stick to send it to (e.g. Vision-Only Mode, where the
+        stick link has already timed out by definition). Never raises for
+        the "not connected" case; a genuine BLE write failure while
+        connected is logged and returns False rather than propagating into
+        the caller's (non-async) dispatch thread.
+        """
+        if not self.is_connected:
+            return False
+        try:
+            await self._client.write_gatt_char(
+                self.command_char_uuid, pattern.encode())
+            return True
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Haptic command %r failed to send: %s", pattern, exc)
+            return False
+
     async def connect(self, on_packet: Callable[[StickPacket], None]):
         if BleakScanner is None:
             raise RuntimeError("bleak is required: pip install bleak")
