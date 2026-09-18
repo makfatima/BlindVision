@@ -75,6 +75,12 @@ class BlindVisionSystem:
 
         self._latest_stick_event = None
 
+        # Set once run() starts the asyncio event loop that owns the BLE
+        # connection; _send_haptic_to_stick (called from the AlertDispatcher's
+        # own worker thread, see audio/tts_engine.py) uses this to schedule
+        # the write safely across threads via run_coroutine_threadsafe.
+        self._loop: "asyncio.AbstractEventLoop" = None
+
     # -- Stick packet handling -------------------------------------------------
     def _on_stick_packet(self, packet: StickPacket):
         if self.instrumented:
@@ -121,11 +127,38 @@ class BlindVisionSystem:
             self._fall_watchdog_start = None
 
     def _send_haptic_to_stick(self, pattern: str):
-        # Released code logs the remote haptic command but does not yet issue
-        # a BLE write to the stick command characteristic. Stick-local haptics
-        # remain implemented in the firmware. Keep this integration boundary
-        # explicit rather than implying remote haptic delivery is measured.
-        logger.debug("Remote haptic command (integration stub) -> stick: %s", pattern)
+        """Issue the fused/vision-driven haptic command to the stick's
+        vibration motor over BLE (StickLink.send_haptic ->
+        smart_stick.ino's onHapticCommand -> outputs_set_pattern). Runs on
+        the AlertDispatcher's own worker thread, not the asyncio thread that
+        owns the BLE connection, so the write is scheduled across threads
+        via run_coroutine_threadsafe rather than awaited directly.
+
+        This closes what was previously a logging-only stub: the ESP32 side
+        (ble_peripheral.cpp's RxCallbacks::onWrite -> onHapticCommand ->
+        outputs_set_pattern) and the pattern-name contract (tts_engine.py's
+        _HAPTIC_PATTERN) already existed; only this Pi-side write was
+        missing. Implemented and unit-tested (see
+        tests/test_haptic_dispatch.py) but NOT yet physically validated on
+        the assembled two-device prototype -- that requires the actual
+        hardware and is not something this fix can claim on its own.
+        """
+        if self._loop is None:
+            logger.debug("Haptic command %r dropped: BLE loop not yet running.", pattern)
+            return
+        try:
+            future = asyncio.run_coroutine_threadsafe(
+                self.stick_link.send_haptic(pattern), self._loop)
+            # Bounded wait so a stuck BLE write can't block the dispatcher's
+            # worker thread (and therefore the next queued spoken alert)
+            # indefinitely; the write itself already has bleak's own
+            # underlying timeout behaviour.
+            sent = future.result(timeout=1.0)
+            if not sent:
+                logger.debug(
+                    "Haptic command %r not delivered (stick not connected).", pattern)
+        except Exception:
+            logger.exception("Haptic command %r failed to schedule/send", pattern)
 
     # -- Camera worker -----------------------------------------------------
     def _camera_worker(self, bearing: str):
@@ -308,6 +341,7 @@ class BlindVisionSystem:
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        self._loop = loop
         try:
             loop.run_until_complete(run_stick_link(self.stick_link, self._on_stick_packet))
         except KeyboardInterrupt:
