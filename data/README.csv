@@ -1,0 +1,6 @@
+BlindVision experimental data,Description
+Purpose,"Aggregate result tables and records accompanying the BlindVision evaluation."
+Participant outcomes,"data/raw/participant_trials_breakdown.csv contains seven tester rows (P01-P07) totaling 100 navigation trials and 96 successful trials. It is a per-tester breakdown, not a listing of the visually impaired participants; see data/raw/README.md."
+Trial outcomes,"data/raw/participant_trial_outcomes_100.csv contains the 100 trial-level outcomes for the same tester pool (96 successful, 4 unsuccessful)."
+Model results,"Heldout_Test.csv contains the reported held-out detection metrics (Table II); Confusion_Matrix.csv contains the ten-class confusion matrix (Table IV); Classwise_Evaluation.csv contains per-class counts, precision and recall recomputed from that matrix. YOLO_Metrics.csv is a six-point author-supplied summary of the original training run, not a raw export (see TRACEABILITY.md)."
+Availability,"Complete image/label data, trained weights, raw epoch-wise training logs, per-class AP values, and raw row-level prediction logs are not included in this release."
