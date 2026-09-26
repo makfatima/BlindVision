@@ -1,5 +1,5 @@
 Metric,Value,Percent
-Precision,0.963,96.3%
+Precision,0.922,92.2%
 Recall,0.956,95.6%
 mAP@0.5,0.968,96.8%
 mAP@0.5:0.95,0.765,76.5%
