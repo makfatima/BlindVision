@@ -1,46 +1,47 @@
 # Traceability manifest
 
+This file maps each result reported in the BlindVision manuscript to the repository artifact that supports it, and states what is not included.
+
 | Reported result | Repository artifact |
 |---|---|
-| Ten-class dataset composition | `data/Dataset_Split.csv`, `data/Dataset_Manifest_.csv`, `data/Class_Definition.csv` |
-| Held-out detection metrics | `data/Heldout_Test.csv`, `data/YOLO_Metrics.csv` |
-| Per-class detection results (recomputed from Table IV's confusion matrix) | `data/Classwise_Evaluation.csv` |
-| Ten-class confusion matrix | `data/Confusion_Matrix.csv` |
-| Participant navigation outcomes | `data/raw/participant_trials_breakdown.csv`, `data/raw/participant_trial_outcomes_100.csv` — a per-tester (not per-disability-status) breakdown; see note below |
-| Full-system aggregate counts | `data/Trial_Session__Summary.csv` |
+| Ten-class dataset composition (Table S1) | `data/Dataset_Split.csv`, `data/Dataset_Manifest_.csv`, `data/Class_Definition.csv` |
+| Held-out detection metrics (Table II) | `data/Heldout_Test.csv` |
+| Ten-class confusion matrix (Table IV) | `data/Confusion_Matrix.csv` |
+| Per-class counts, precision, recall | `data/Classwise_Evaluation.csv` (recomputed from `data/Confusion_Matrix.csv`) |
+| Navigation outcomes (Table IX) | `data/raw/participant_trials_breakdown.csv`, `data/raw/participant_trial_outcomes_100.csv` (per-tester, see note below) |
+| Full-system aggregate counts (Tables V, S2) | `data/Trial_Session__Summary.csv` |
 | BLE results | `data/BLE_Trace__Summary.csv` |
-| Power measurements | `data/Power_Log.csv` |
-| Fusion/arbitration configuration | `data/Arbitration_Ladder_Supplied.csv`, `smart_goggles/config.py` |
-| Caregiver event path | `data/Caregiver_API_Runtime_Summary.csv` |
+| Power (Table X) | `data/Power_Log.csv` |
+| Fusion/arbitration configuration (Algorithm 1) | `smart_goggles/config.py`, `smart_goggles/fusion/arbitration.py`, `data/Arbitration_Ladder_Supplied.csv` |
+| Fused-score ceiling (Section IV) | `smart_goggles/fusion/risk_model.py` (`max_reachable_fused_score`), `tests/test_fusion_ceiling.py` |
+| Caregiver event path | `backend/app.py`, `data/Caregiver_API_Runtime_Summary.csv` |
+| Pending physical validations | `docs/PHYSICAL_TEST_PROTOCOLS.md`, `docs/RELEASE_CANDIDATE.md` |
+| Consistency checks | `data/Consistency_Checks.csv` |
 
-## Note on participant data
+## Participant data
 
-The `data/raw/` files trace Table IX's 100-trial aggregate by tester (P01–P07), not by disability status. The manuscript's seven-visually-impaired-participant cohort (Section VI.A) is a separate accounting: one of those participants' trials fall within this 100-trial pool, and the other six ran a distinct 48-trial batch that is reported only descriptively and has no row-level file in this release. Do not cite `data/raw/` as trial-level evidence for the six-participant batch.
+The `data/raw/` files break Table IX's 100-trial pool down by tester (P01-P07), not by visual status. The manuscript's seven visually impaired participants are a separate accounting (Section VI.A): one took part in trials inside this pool; six others completed a separate 48-trial session that is reported descriptively only and has no row-level file here.
 
-## Confusion-matrix accounting basis
+## Detection accounting
 
-`data/Confusion_Matrix.csv` is a closed, matched class-to-class matrix. It contains 842 ground-truth instances, 805 diagonal correct classifications, and 37 off-diagonal inter-class confusions. The matrix does not contain a background/no-detection row or column and therefore does not include unmatched/background false detections.
+`data/Confusion_Matrix.csv` is a matched class-to-class matrix: 842 ground-truth instances, 805 correct, 37 inter-class confusions. It has no background column; every ground-truth instance was matched to a prediction of some class. Table II's pooled precision combines the 37 confusions with 31 unmatched background false positives: 805 / 873 = 92.2%. Table III's 0.044 false positives per image uses the 31 background false positives alone. The per-class precision in `data/Classwise_Evaluation.csv` counts inter-class confusions only and is therefore higher than the pooled 92.2%.
 
-Table II/III's 96.3% precision and 31 false positives per 700 images use the separate full-detection accounting supplied for the held-out evaluation. Thus the 31 false positives are not expected to equal the 37 off-diagonal inter-class confusions in the matched matrix. The two accounting bases must not be recombined as though they were one closed confusion matrix.
+Per-class AP values are not released, so mAP (Table II) cannot be recomputed from this repository.
 
-## BLE timing basis
+## Timing, throughput, and power
 
-The 17.5 ms BLE value is a derived one-way estimate (RTT/2) from ping-token round-trip measurements on the Raspberry Pi. The ESP32 and Raspberry Pi do not share a synchronized clock, so it is not a direct one-way timestamp difference.
+- The 17.5 ms BLE value is a derived one-way estimate (RTT/2) from ping tokens timed on the Raspberry Pi; the devices share no clock.
+- The 205 ms value is a serialized single-stream stage-sum (122 + 17.5 + 9 + 56 ms), not a direct end-to-end measurement.
+- The 22.8 FPS four-camera figure was measured on earlier software, before the one-model-per-thread change. It is not a current-code benchmark; re-measurement is pending (`docs/PHYSICAL_TEST_PROTOCOLS.md`).
+- `data/Power_Log.csv` holds five active-detection samples (mean 12.11 W). The ~3.1 h goggles runtime is a nominal-equivalent projection (37 Wh / 12.11 W), not a depletion test.
 
-## Power provenance
+## Implementation status
 
-`data/Power_Log.csv` contains five active-detection samples averaging 12.11 W. It does not contain the previously stated 1.48 A/1.86 A profiles or separate idle/maximum-load discharge runs. The manuscript therefore reports the released samples directly and treats the approximately 3.1 h active runtime as a nominal-equivalent projection from 37 Wh / 12.11 W.
+- Vision distance is disabled while `CAMERA_FOCAL_LENGTH_PX` is `None` (the released default). The vision-proximity term and the vision clauses of Tiers 3, 8 and 9 are then inactive, and Tier 7 (HIGH_RISK_FUSED) is unreachable (ceiling ~0.608).
+- Vision-Only Mode has a distance-independent fallback (Tier 9a, confidence >= 0.60), unit-tested in `tests/test_arbitration.py`; not yet physically fault-injection tested.
+- The goggles-to-stick haptic write (`smart_goggles/ble/stick_link.py`, `send_haptic`) is unit-tested against a simulated BLE client (`tests/test_haptic_dispatch.py`); physical motor actuation is not yet tested.
+- The proof-of-concept uses stock `yolov8n.pt`.
 
-## Caregiver/API provenance
+## Not included
 
-`data/Caregiver_API_Runtime_Summary.csv` is aligned to the released backend: local HTTP, no enforced Bearer authentication, and HTTP 200 for `POST /api/v1/events`. TLS is an external deployment concern rather than a feature enforced by `backend/app.py`.
-
-## Implementation-status notes
-
-The released goggles-side remote haptic callback is an integration logging stub; the stick's local haptic path is implemented. Vision distance estimation remains disabled because `CAMERA_FOCAL_LENGTH_PX` is `None`; consequently the vision-proximity term and the 2 m high-risk visual-class distance clause are inactive in the released configuration. The proof-of-concept uses stock `yolov8n.pt`; the fine-tuned ten-class weights are not included.
-
-The four-camera throughput result is measured at 22.8 FPS aggregate, while the 205 ms value is a serialized single-stream stage-sum estimate and not a direct four-camera end-to-end latency measurement. The released latency protocol is documented in `docs/LATENCY_EXPERIMENT.md`.
-
-## Unavailable source artifacts
-
-The complete image/label dataset, trained model weights, epoch-wise training logs, and raw confusion-matrix event data are not included in this release, consistent with the manuscript's Data Availability statement.
+Complete image/label dataset, trained weights for the primary results, epoch-wise training logs, per-class AP values, raw sequence-number BLE trace, and raw row-level prediction/event logs.

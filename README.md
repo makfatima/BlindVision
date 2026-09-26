@@ -65,13 +65,13 @@ Other released measurements cover ten-class detection, BLE communication, ultras
 - Water-hazard detection accuracy: **98.4%**
 - SOS detection: **100% (20/20)**
 - Single-stream processing-path estimate: **205 ms**
-- Four-camera aggregate throughput: **22.8 FPS**
+- Primary ten-class detector (700 held-out images): **92.2% precision, 95.6% recall, 96.8% mAP@0.50**
 
-The 205 ms value is a processing-path estimate obtained by summing separately measured single-stream stage means. It is not presented as a direct simultaneous four-camera end-to-end timing measurement. The 22.8 FPS figure is the measured aggregate throughput of the four-camera run.
+The 205 ms value is a processing-path estimate obtained by summing separately measured single-stream stage means. It is not presented as a direct simultaneous four-camera end-to-end timing measurement. An earlier four-camera run (22.8 FPS aggregate) was measured before the one-model-per-thread change and is not a current-code benchmark; re-measurement is pending (`docs/PHYSICAL_TEST_PROTOCOLS.md`).
 
 ## Power measurements
 
-The goggles and Smart Stick use separate power domains. The released goggles-side `data/Power_Log.csv` contains five active-detection samples at approximately 5.03–5.06 V and 2.38–2.42 A, averaging **12.11 W** at the 5-V USB input. The file does not contain separate idle or maximum-load profiles, so those runtime modes are not reported as measured. Using the nominal 37 Wh power-bank rating gives a nominal-equivalent active runtime of about **3.1 h**, which is a projection rather than a depletion test. The Smart Stick runtime figure is a separate derived upper bound from its nominal 5,000 mAh cell and an assumed 575 mA average draw.
+The goggles and Smart Stick use separate power domains. The released goggles-side `data/Power_Log.csv` contains five active-detection samples at approximately 5.03–5.06 V and 2.38–2.42 A, averaging **12.11 W** at the 5-V USB input. The file does not contain separate idle or maximum-load profiles, so those runtime modes are not reported as measured. Using the nominal 37 Wh power-bank rating gives a nominal-equivalent active runtime of about **3.1 h**, which is a projection rather than a depletion test.
 
 ## Backend/security scope
 
