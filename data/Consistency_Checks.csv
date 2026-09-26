@@ -1,8 +1,13 @@
 Check,Calculation,Status
-10-class count,10 class IDs: 0–9,PASS
+10-class count,10 class IDs: 0-9 (data/Class_Definition.csv),PASS
+Confusion matrix total,Sum of all cells in data/Confusion_Matrix.csv = 842 ground-truth instances,PASS
+Confusion matrix diagonal,Sum of diagonal = 805 correct classifications; off-diagonal = 37,PASS
+Pooled precision (Table II),805 / (805 + 37 inter-class + 31 unmatched background FP) = 805/873 = 0.922,PASS
+Recall (Table II),805 / 842 = 0.956,PASS
+F1 (Table II),2 x 0.922 x 0.956 / (0.922 + 0.956) = 0.939,PASS
+False positives per image (Table III),31 / 700 = 0.044,PASS
+Classwise vs confusion matrix,data/Classwise_Evaluation.csv per-class counts recomputed from data/Confusion_Matrix.csv,PASS
 Power mean current,(2.38+2.41+2.39+2.42+2.40)/5 = 2.400 A,PASS
 Power mean,(12.04+12.15+12.07+12.17+12.10)/5 = 12.106 W,PASS
-Mean V × mean I,5.044 × 2.400 = 12.106 W,PASS
-Battery mean current,Mean of 11 values = 1.472 A,PASS
-Validation/test separation,0.98/0.96/0.99/0.85 vs 0.963/0.956/0.968/0.765,PASS
-Latency arithmetic,10 trial means average to 121.875 ms,PASS
+Mean V x mean I,5.044 x 2.400 = 12.106 W,PASS
+Navigation outcomes,data/raw/participant_trial_outcomes_100.csv: 96 of 100 outcomes = 1,PASS
