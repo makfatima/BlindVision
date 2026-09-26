@@ -42,6 +42,13 @@ Per-class AP values are not released, so mAP (Table II) cannot be recomputed fro
 - The goggles-to-stick haptic write (`smart_goggles/ble/stick_link.py`, `send_haptic`) is unit-tested against a simulated BLE client (`tests/test_haptic_dispatch.py`); physical motor actuation is not yet tested.
 - The proof-of-concept uses stock `yolov8n.pt`.
 
+## Other files in this repository
+
+- `data/YOLO_Metrics.csv` (and the matching workbook sheet) is a six-point summary of the original primary training run at epochs 1, 10, 20, 30, 40 and 50, supplied by the authors. It is not a raw Ultralytics export and cannot be checked against one, because the raw per-epoch log is not included. Its values are validation-split metrics and are not the held-out test results of Table II.
+- `docs/BlindVision_FINAL_MANUSCRIPT.docx` is an earlier manuscript draft kept for the project record. The submitted manuscript supersedes it wherever they differ.
+- `PHYSICAL_TEST_PROTOCOLS.md` (repository root) is an earlier working version of the protocols. The version cited by the manuscript is `docs/PHYSICAL_TEST_PROTOCOLS.md`.
+- `IEEE_COVER_LETTER.md` and `IEEE_COVER_LETTER_DRAFT.md` are project submission notes, not research artifacts.
+
 ## Not included
 
-Complete image/label dataset, trained weights for the primary results, epoch-wise training logs, per-class AP values, raw sequence-number BLE trace, and raw row-level prediction/event logs.
+Complete image/label dataset, trained weights for the primary results, raw epoch-wise training logs, per-class AP values, raw sequence-number BLE trace, and raw row-level prediction/event logs.

@@ -41,10 +41,10 @@ No missing trained weights, image/label records, epoch-wise training logs, or ra
 
 ## Submission cleanup (manuscript v98)
 
-- Removed `data/YOLO_Metrics.csv` and the matching sheet: it was a six-point summary, not a raw training export, and the manuscript states epoch-wise logs are not released.
 - Rebuilt `data/Classwise_Evaluation.csv` from `data/Confusion_Matrix.csv` only; removed the per-class mAP columns, which could not be recomputed and whose mean did not match Table II.
 - Rewrote `data/Consistency_Checks.csv` so every check uses files present in the repository and Table II's reconciled 92.2% precision.
-- Removed `data/BlindVision__dataset (1).xlsx` (a duplicate of the CSVs holding stale values, including 96.3% precision).
-- Removed `docs/BlindVision_FINAL_MANUSCRIPT.docx` (an outdated manuscript copy), the duplicate root `PHYSICAL_TEST_PROTOCOLS.md` (the cited version is `docs/PHYSICAL_TEST_PROTOCOLS.md`), and internal submission notes (`SUBMISSION_READINESS.md`, `IEEE_COVER_LETTER*.md`).
-- Updated `TRACEABILITY.md` and `data/README.csv` to match manuscript v98.
-- Regenerated `release/SHA256SUMS.json`.
+- Updated `data/BlindVision__dataset (1).xlsx` to match the CSVs (held-out precision 92.2%, recomputed Classwise_Evaluation and Consistency_Checks sheets) and labelled its YOLO_Metrics sheet.
+- Labelled `data/YOLO_Metrics.csv` as a six-point author-supplied summary, not a raw training export (see `TRACEABILITY.md`).
+- Removed `SUBMISSION_READINESS.md` (outdated internal checklist).
+- Updated `TRACEABILITY.md`, `README.md`, and `data/README.csv` to match manuscript v98.
+- Merged `submission/v96-final` into `main` and regenerated `release/SHA256SUMS.json`.
